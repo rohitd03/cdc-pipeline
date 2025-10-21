@@ -1,0 +1,364 @@
+{
+	"info": {
+		"_postman_id": "cdc-pipeline-collection",
+		"name": "CDC Pipeline API",
+		"description": "Complete API collection for CDC Pipeline project",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Orders (Write)",
+			"item": [
+				{
+					"name": "Create Order",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const responseJson = pm.response.json();",
+									"    pm.environment.set('order_id', responseJson.data.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"customer_id\": \"{{customer_id}}\",\n  \"customer_name\": \"John Doe\",\n  \"customer_email\": \"john.doe@example.com\",\n  \"product_name\": \"Wireless Headphones\",\n  \"product_sku\": \"WH-1000X\",\n  \"quantity\": 1,\n  \"amount\": 299.99,\n  \"currency\": \"USD\",\n  \"shipping_address\": \"123 Main St, New York, NY 10001\",\n  \"notes\": \"Please deliver before 5 PM\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/orders",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "orders"]
+						},
+						"description": "Create a new order in PostgreSQL"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Order Status - Confirm",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"confirmed\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/orders/{{order_id}}/status",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "orders", "{{order_id}}", "status"]
+						},
+						"description": "Update order status to confirmed"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Order Status - Ship",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"shipped\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/orders/{{order_id}}/status",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "orders", "{{order_id}}", "status"]
+						},
+						"description": "Update order status to shipped"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Order Status - Invalid Transition",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"pending\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/orders/{{order_id}}/status",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "orders", "{{order_id}}", "status"]
+						},
+						"description": "Attempt an invalid status transition (should return 409)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Order by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/orders/{{order_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "orders", "{{order_id}}"]
+						},
+						"description": "Get a single order from PostgreSQL by ID"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Order",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/orders/{{order_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "orders", "{{order_id}}"]
+						},
+						"description": "Delete an order from PostgreSQL"
+					},
+					"response": []
+				}
+			],
+			"description": "Order management endpoints (write operations using PostgreSQL)"
+		},
+		{
+			"name": "Search (Read from Elasticsearch)",
+			"item": [
+				{
+					"name": "Search All Orders",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/search/orders",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "search", "orders"]
+						},
+						"description": "Get all orders from Elasticsearch"
+					},
+					"response": []
+				},
+				{
+					"name": "Full-Text Search",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/search/orders?q=wireless+headphones",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "search", "orders"],
+							"query": [
+								{
+									"key": "q",
+									"value": "wireless+headphones"
+								}
+							]
+						},
+						"description": "Full-text search across product names, customer names, and notes"
+					},
+					"response": []
+				},
+				{
+					"name": "Filter by Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/search/orders?status=shipped",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "search", "orders"],
+							"query": [
+								{
+									"key": "status",
+									"value": "shipped"
+								}
+							]
+						},
+						"description": "Filter orders by status"
+					},
+					"response": []
+				},
+				{
+					"name": "Filter by Amount Range",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/search/orders?min_amount=50&max_amount=200",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "search", "orders"],
+							"query": [
+								{
+									"key": "min_amount",
+									"value": "50"
+								},
+								{
+									"key": "max_amount",
+									"value": "200"
+								}
+							]
+						},
+						"description": "Filter orders by price range"
+					},
+					"response": []
+				},
+				{
+					"name": "Filter by Customer ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/search/orders?customer_id={{customer_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "search", "orders"],
+							"query": [
+								{
+									"key": "customer_id",
+									"value": "{{customer_id}}"
+								}
+							]
+						},
+						"description": "Filter orders by customer ID"
+					},
+					"response": []
+				},
+				{
+					"name": "Search with Pagination",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/search/orders?page=2&page_size=5",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "search", "orders"],
+							"query": [
+								{
+									"key": "page",
+									"value": "2"
+								},
+								{
+									"key": "page_size",
+									"value": "5"
+								}
+							]
+						},
+						"description": "Paginated search results"
+					},
+					"response": []
+				},
+				{
+					"name": "Search with Sort",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/search/orders?sort_by=amount&sort_order=asc",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "search", "orders"],
+							"query": [
+								{
+									"key": "sort_by",
+									"value": "amount"
+								},
+								{
+									"key": "sort_order",
+									"value": "asc"
+								}
+							]
+						},
+						"description": "Sort orders by amount ascending"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Single Order from ES",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/search/orders/{{order_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "search", "orders", "{{order_id}}"]
+						},
+						"description": "Get a single order directly from Elasticsearch"
+					},
+					"response": []
+				}
+			],
+			"description": "Search operations (read from Elasticsearch)"
+		},
+		{
+			"name": "System",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/health",
+							"host": ["{{base_url}}"],
+							"path": ["health"]
+						},
+						"description": "Check health of all dependencies (Postgres, Kafka, Elasticsearch)"
+					},
+					"response": []
+				},
+				{
+					"name": "Pipeline Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/pipeline/status",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "pipeline", "status"]
+						},
+						"description": "Get CDC pipeline status including consumer lag and last processed event"
+					},
+					"response": []
+				},
+				{
+					"name": "Metrics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/metrics",
+							"host": ["{{base_url}}"],
+							"path": ["metrics"]
+						},
+						"description": "Prometheus metrics endpoint"
+					},
+					"response": []
+				}
+			],
+			"description": "System endpoints for health checks and monitoring"
+		}
+	]
+}
