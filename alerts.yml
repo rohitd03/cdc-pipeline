@@ -1,0 +1,146 @@
+groups:
+
+  # ─────────────────────────────────────────────
+  # Service-level alerts
+  # ─────────────────────────────────────────────
+  - name: service
+    rules:
+
+      - alert: ServiceDown
+        expr: up{job="cdc-pipeline"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "CDC Pipeline service is down"
+          description: "The cdc-pipeline instance {{ $labels.instance }} has been unreachable for more than 1 minute. Immediate action required."
+
+      - alert: HighErrorRate
+        expr: |
+          sum(rate(http_requests_total{status_code=~"5.."}[5m]))
+          /
+          sum(rate(http_requests_total[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High HTTP 5xx error rate detected"
+          description: "HTTP 5xx error rate is {{ $value | humanizePercentage }} over the last 5 minutes (threshold: 5%). Check application logs for error details."
+
+      - alert: HighLatency
+        expr: |
+          histogram_quantile(0.99,
+            sum(rate(http_request_duration_seconds_bucket[5m])) by (le)
+          ) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High HTTP request latency (p99 > 2s)"
+          description: "HTTP request p99 latency is {{ $value | humanizeDuration }} over the last 5 minutes (threshold: 2s). Investigate slow endpoints."
+
+  # ─────────────────────────────────────────────
+  # Kafka consumer alerts
+  # ─────────────────────────────────────────────
+  - name: kafka
+    rules:
+
+      - alert: KafkaConsumerLagHigh
+        expr: kafka_consumer_lag > 1000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Kafka consumer lag is high"
+          description: "Consumer lag for topic {{ $labels.topic }} / partition {{ $labels.partition }} is {{ $value }} messages (threshold: 1000). CDC events are accumulating."
+
+      - alert: DLQMessagesIncreasing
+        expr: rate(kafka_dlq_messages_total[2m]) > 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Messages are being sent to the Dead Letter Queue"
+          description: "DLQ is receiving new messages at {{ $value | humanize }} msg/s. Processing failures are occurring — inspect kafka_processing_errors_total for root cause."
+
+      - alert: KafkaProcessingErrorsHigh
+        expr: |
+          sum(rate(kafka_processing_errors_total[3m]))
+          /
+          sum(rate(kafka_messages_consumed_total[3m])) > 0.1
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Kafka message processing error rate is high"
+          description: "Kafka processing error rate is {{ $value | humanizePercentage }} over the last 3 minutes (threshold: 10%). Check consumer logs and DLQ for failed messages."
+
+  # ─────────────────────────────────────────────
+  # Elasticsearch alerts
+  # ─────────────────────────────────────────────
+  - name: elasticsearch
+    rules:
+
+      - alert: ESIndexingErrorsHigh
+        expr: |
+          sum(rate(es_operation_errors_total[3m]))
+          /
+          sum(rate(es_index_operations_total[3m])) > 0.1
+        for: 3m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Elasticsearch indexing error rate is high"
+          description: "ES indexing error rate is {{ $value | humanizePercentage }} over the last 3 minutes (threshold: 10%). Documents may be lost — check ES cluster health and logs."
+
+      - alert: ESHighLatency
+        expr: |
+          histogram_quantile(0.99,
+            sum(rate(es_operation_duration_seconds_bucket[5m])) by (le, operation)
+          ) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Elasticsearch operation latency is high (p99 > 1s)"
+          description: "ES {{ $labels.operation }} operation p99 latency is {{ $value | humanizeDuration }} over the last 5 minutes (threshold: 1s). Check cluster load and JVM heap."
+
+  # ─────────────────────────────────────────────
+  # PostgreSQL alerts
+  # ─────────────────────────────────────────────
+  - name: postgresql
+    rules:
+
+      - alert: PostgresConnectionPoolExhausted
+        expr: db_pool_available_connections < 2
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL connection pool is nearly exhausted"
+          description: "Only {{ $value }} connections are available in the pool (threshold: 2). New requests are at risk of being rejected. Check for connection leaks or increase POSTGRES_MAX_CONNS."
+
+  # ─────────────────────────────────────────────
+  # Pipeline health alerts
+  # ─────────────────────────────────────────────
+  - name: pipeline
+    rules:
+
+      - alert: PipelineSyncLagHigh
+        expr: pipeline_lag_seconds > 30
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "CDC pipeline sync lag is high"
+          description: "Pipeline sync lag is {{ $value | humanizeDuration }} (threshold: 30s) and has been elevated for 5 minutes. CDC events are falling behind real-time."
+
+      - alert: PipelineLastEventStale
+        # Fires when no new CDC event has been processed for more than 10 minutes.
+        expr: time() - pipeline_last_event_timestamp > 600
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "No new CDC events received for over 10 minutes"
+          description: "The last CDC event was processed {{ $value | humanizeDuration }} ago. The Debezium connector or Kafka consumer may be stalled — check connector status and consumer group offsets."

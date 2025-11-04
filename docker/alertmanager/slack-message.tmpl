@@ -1,0 +1,32 @@
+{{/*
+  slack-message.tmpl — Custom Alertmanager Slack notification template
+  for the CDC Pipeline project.
+
+  Provides two named templates consumed by alertmanager.yml:
+    - slack.title   : one-line subject with severity emoji and status
+    - slack.message : body with summary, description, Grafana link, timestamp
+*/}}
+
+{{- define "slack.title" -}}
+{{- if eq .Status "firing" -}}
+  {{- $sev := (index .Alerts 0).Labels.severity -}}
+  {{- if eq $sev "critical" -}}🔴{{- else -}}🟡{{- end -}}
+{{- else -}}🟢{{- end -}}
+ [{{ .Status | toUpper }}] {{ (index .Alerts 0).Labels.alertname }}
+{{- end -}}
+
+{{- define "slack.message" -}}
+{{ range .Alerts -}}
+*Severity:*  {{ .Labels.severity | title }}
+*Summary:*   {{ .Annotations.summary }}
+*Description:*
+{{ .Annotations.description }}
+
+*Grafana:*   <http://localhost:3000|Open Dashboard>
+*Fired at:*  {{ .StartsAt.UTC.Format "2006-01-02 15:04:05 UTC" }}
+{{ if .EndsAt.After .StartsAt -}}
+*Resolved:*  {{ .EndsAt.UTC.Format "2006-01-02 15:04:05 UTC" }}
+{{ end -}}
+────────────────────────────────────
+{{ end -}}
+{{- end -}}

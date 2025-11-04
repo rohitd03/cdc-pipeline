@@ -119,10 +119,37 @@ services:
       - "9090:9090"
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./alerts.yml:/etc/prometheus/alerts.yml
       - prometheus_data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
+    networks:
+      - cdc-network
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: cdc-alertmanager
+    depends_on:
+      - prometheus
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager-template.yml
+      - ./docker/alertmanager/slack-message.tmpl:/etc/alertmanager/templates/slack-message.tmpl
+    entrypoint:
+      - sh
+      - -c
+      - |
+        sed -e 's|$${SLACK_WEBHOOK_URL_CRITICAL}|${SLACK_WEBHOOK_URL_CRITICAL}|g' -e 's|$${SLACK_WEBHOOK_URL_WARNINGS}|${SLACK_WEBHOOK_URL_WARNINGS}|g' /etc/alertmanager/alertmanager-template.yml > /etc/alertmanager/alertmanager.yml && alertmanager --config.file=/etc/alertmanager/alertmanager.yml --storage.path=/alertmanager
+    environment:
+      - SLACK_WEBHOOK_URL_CRITICAL=${SLACK_WEBHOOK_URL_CRITICAL}
+      - SLACK_WEBHOOK_URL_WARNINGS=${SLACK_WEBHOOK_URL_WARNINGS}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:9093/-/healthy || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     networks:
       - cdc-network
 

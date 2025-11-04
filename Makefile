@@ -16,8 +16,8 @@ endif
         docker-up docker-down wait \
         migrate seed register-connector init-es-index \
         setup teardown restart verify-pipeline \
-        check-postgres check-elasticsearch check-kafka check-debezium check-app check-all \
-        logs logs-all logs-debezium logs-kafka \
+        check-postgres check-elasticsearch check-kafka check-debezium check-app check-alertmanager check-all \
+        logs logs-all logs-debezium logs-kafka logs-alertmanager \
         clean deps help
 
 # ─────────────────────────────────────────────
@@ -167,6 +167,7 @@ setup: docker-up wait migrate init-es-index register-connector seed verify-pipel
 	@echo "    Kibana         → http://localhost:5601"
 	@echo "    Grafana        → http://localhost:3000  (admin / admin)"
 	@echo "    Prometheus     → http://localhost:9090"
+	@echo "    Alertmanager   → http://localhost:9093"
 	@echo "    Elasticsearch  → http://localhost:9200"
 	@echo "    Kafka Connect  → http://localhost:8083"
 	@echo "    PostgreSQL     → localhost:5432  (postgres / postgres)"
@@ -211,7 +212,13 @@ check-app:
 	@echo ""
 	@echo "✅ App health check done"
 
-check-all: check-postgres check-elasticsearch check-kafka check-debezium check-app
+check-alertmanager:
+	@echo "⏳ Checking Alertmanager health..."
+	@curl -s http://localhost:9093/-/healthy
+	@echo ""
+	@echo "✅ Alertmanager health check done"
+
+check-all: check-postgres check-elasticsearch check-kafka check-debezium check-app check-alertmanager
 	@echo "✅ All checks completed"
 
 # ─────────────────────────────────────────────
@@ -233,6 +240,10 @@ logs-debezium:
 logs-kafka:
 	@echo "⏳ Tailing Kafka logs..."
 	docker compose logs -f kafka
+
+logs-alertmanager:
+	@echo "⏳ Tailing Alertmanager logs..."
+	docker compose logs -f alertmanager
 
 # ─────────────────────────────────────────────
 # Utilities
@@ -279,12 +290,14 @@ help:
 	@echo "    check-kafka          - List Kafka topics"
 	@echo "    check-debezium       - Debezium connector status"
 	@echo "    check-app            - App /health endpoint"
+	@echo "    check-alertmanager   - Alertmanager /health endpoint"
 	@echo ""
 	@echo "  LOGS"
 	@echo "    logs                 - Tail app logs"
 	@echo "    logs-all             - Tail all service logs"
 	@echo "    logs-debezium        - Tail Kafka Connect / Debezium logs"
 	@echo "    logs-kafka           - Tail Kafka logs"
+	@echo "    logs-alertmanager    - Tail Alertmanager logs"
 	@echo ""
 	@echo "  BUILD & TEST"
 	@echo "    build                - Build the application binary"

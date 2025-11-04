@@ -21,7 +21,7 @@ services:
   kafka-test:
     image: confluentinc/cp-kafka:7.5.0
     ports:
-      - "9093:9093"
+      - "9094:9093"    # was 9093:9093, changed to 9094 to avoid Alertmanager conflict
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper-test:2181
