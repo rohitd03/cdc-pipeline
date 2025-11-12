@@ -55,38 +55,36 @@ func (m *MockOrderRepository) GetOrderByID(ctx context.Context, id string) (*mod
 func TestDebeziumHandler_HandleInsertEvent(t *testing.T) {
 	tests := []struct {
 		name        string
-		event       model.DebeziumEvent
+		event       model.DebeziumPayload
 		expectError bool
 		errorType   error
 		setupMock   func(*MockOrderRepository)
 	}{
 		{
 			name: "valid INSERT event",
-			event: model.DebeziumEvent{
-				Payload: model.DebeziumPayload{
-					Op: "c",
-					After: &model.OrderDBRow{
-						ID:            "order-1",
-						CustomerID:    "cust-1",
-						CustomerName:  "John Doe",
-						CustomerEmail: "john@example.com",
-						ProductName:   "Laptop",
-						ProductSKU:    "LT-001",
-						Quantity:      1,
-						Amount:        1000.00,
-						Currency:      "USD",
-						Status:        "pending",
-						ShippingAddr:  "123 Main St",
-						Notes:         "Test order",
-						CreatedAt:     time.Now().UnixMicro(),
-						UpdatedAt:     time.Now().UnixMicro(),
-					},
-					Source: model.DebeziumSource{
-						Table: "orders",
-						LSN:   12345,
-					},
-					TsMs: time.Now().UnixMilli(),
+			event: model.DebeziumPayload{
+				Op: "c",
+				After: &model.OrderDBRow{
+					ID:            "order-1",
+					CustomerID:    "cust-1",
+					CustomerName:  "John Doe",
+					CustomerEmail: "john@example.com",
+					ProductName:   "Laptop",
+					ProductSKU:    "LT-001",
+					Quantity:      1,
+					Amount:        1000.00,
+					Currency:      "USD",
+					Status:        "pending",
+					ShippingAddr:  "123 Main St",
+					Notes:         "Test order",
+					CreatedAt:     time.Now().Format(time.RFC3339Nano),
+					UpdatedAt:     time.Now().Format(time.RFC3339Nano),
 				},
+				Source: model.DebeziumSource{
+					Table: "orders",
+					LSN:   12345,
+				},
+				TsMs: time.Now().UnixMilli(),
 			},
 			expectError: false,
 			setupMock: func(m *MockOrderRepository) {
@@ -95,15 +93,13 @@ func TestDebeziumHandler_HandleInsertEvent(t *testing.T) {
 		},
 		{
 			name: "missing after field in INSERT event",
-			event: model.DebeziumEvent{
-				Payload: model.DebeziumPayload{
-					Op:    "c",
-					After: nil,
-					Source: model.DebeziumSource{
-						Table: "orders",
-					},
-					TsMs: time.Now().UnixMilli(),
+			event: model.DebeziumPayload{
+				Op:    "c",
+				After: nil,
+				Source: model.DebeziumSource{
+					Table: "orders",
 				},
+				TsMs: time.Now().UnixMilli(),
 			},
 			expectError: true,
 			errorType:   appErrors.ErrMissingAfterField,
@@ -140,37 +136,35 @@ func TestDebeziumHandler_HandleInsertEvent(t *testing.T) {
 func TestDebeziumHandler_HandleUpdateEvent(t *testing.T) {
 	tests := []struct {
 		name        string
-		event       model.DebeziumEvent
+		event       model.DebeziumPayload
 		expectError bool
 		setupMock   func(*MockOrderRepository)
 	}{
 		{
 			name: "valid UPDATE event",
-			event: model.DebeziumEvent{
-				Payload: model.DebeziumPayload{
-					Op: "u",
-					After: &model.OrderDBRow{
-						ID:            "order-1",
-						CustomerID:    "cust-1",
-						CustomerName:  "John Doe",
-						CustomerEmail: "john@example.com",
-						ProductName:   "Laptop",
-						ProductSKU:    "LT-001",
-						Quantity:      1,
-						Amount:        1000.00,
-						Currency:      "USD",
-						Status:        "confirmed",
-						ShippingAddr:  "123 Main St",
-						Notes:         "Test order",
-						CreatedAt:     time.Now().UnixMicro(),
-						UpdatedAt:     time.Now().UnixMicro(),
-					},
-					Source: model.DebeziumSource{
-						Table: "orders",
-						LSN:   12346,
-					},
-					TsMs: time.Now().UnixMilli(),
+			event: model.DebeziumPayload{
+				Op: "u",
+				After: &model.OrderDBRow{
+					ID:            "order-1",
+					CustomerID:    "cust-1",
+					CustomerName:  "John Doe",
+					CustomerEmail: "john@example.com",
+					ProductName:   "Laptop",
+					ProductSKU:    "LT-001",
+					Quantity:      1,
+					Amount:        1000.00,
+					Currency:      "USD",
+					Status:        "confirmed",
+					ShippingAddr:  "123 Main St",
+					Notes:         "Test order",
+					CreatedAt:     time.Now().Format(time.RFC3339Nano),
+					UpdatedAt:     time.Now().Format(time.RFC3339Nano),
 				},
+				Source: model.DebeziumSource{
+					Table: "orders",
+					LSN:   12346,
+				},
+				TsMs: time.Now().UnixMilli(),
 			},
 			expectError: false,
 			setupMock: func(m *MockOrderRepository) {
@@ -205,25 +199,23 @@ func TestDebeziumHandler_HandleUpdateEvent(t *testing.T) {
 func TestDebeziumHandler_HandleDeleteEvent(t *testing.T) {
 	tests := []struct {
 		name        string
-		event       model.DebeziumEvent
+		event       model.DebeziumPayload
 		expectError bool
 		errorType   error
 		setupMock   func(*MockOrderRepository)
 	}{
 		{
 			name: "valid DELETE event",
-			event: model.DebeziumEvent{
-				Payload: model.DebeziumPayload{
-					Op: "d",
-					Before: &model.OrderDBRow{
-						ID: "order-1",
-					},
-					Source: model.DebeziumSource{
-						Table: "orders",
-						LSN:   12347,
-					},
-					TsMs: time.Now().UnixMilli(),
+			event: model.DebeziumPayload{
+				Op: "d",
+				Before: &model.OrderDBRow{
+					ID: "order-1",
 				},
+				Source: model.DebeziumSource{
+					Table: "orders",
+					LSN:   12347,
+				},
+				TsMs: time.Now().UnixMilli(),
 			},
 			expectError: false,
 			setupMock: func(m *MockOrderRepository) {
@@ -232,15 +224,13 @@ func TestDebeziumHandler_HandleDeleteEvent(t *testing.T) {
 		},
 		{
 			name: "missing before field in DELETE event",
-			event: model.DebeziumEvent{
-				Payload: model.DebeziumPayload{
-					Op:     "d",
-					Before: nil,
-					Source: model.DebeziumSource{
-						Table: "orders",
-					},
-					TsMs: time.Now().UnixMilli(),
+			event: model.DebeziumPayload{
+				Op:     "d",
+				Before: nil,
+				Source: model.DebeziumSource{
+					Table: "orders",
 				},
+				TsMs: time.Now().UnixMilli(),
 			},
 			expectError: true,
 			errorType:   appErrors.ErrMissingBeforeField,
@@ -284,30 +274,28 @@ func TestDebeziumHandler_HandleSnapshotEvent(t *testing.T) {
 	handler := consumer.NewDebeziumHandler(mockRepo, metricsRegistry, logger)
 
 	// Snapshot events have op="r"
-	event := model.DebeziumEvent{
-		Payload: model.DebeziumPayload{
-			Op: "r",
-			After: &model.OrderDBRow{
-				ID:            "order-1",
-				CustomerID:    "cust-1",
-				CustomerName:  "John Doe",
-				CustomerEmail: "john@example.com",
-				ProductName:   "Laptop",
-				ProductSKU:    "LT-001",
-				Quantity:      1,
-				Amount:        1000.00,
-				Currency:      "USD",
-				Status:        "pending",
-				ShippingAddr:  "123 Main St",
-				Notes:         "Test order",
-				CreatedAt:     time.Now().UnixMicro(),
-				UpdatedAt:     time.Now().UnixMicro(),
-			},
-			Source: model.DebeziumSource{
-				Table: "orders",
-			},
-			TsMs: time.Now().UnixMilli(),
+	event := model.DebeziumPayload{
+		Op: "r",
+		After: &model.OrderDBRow{
+			ID:            "order-1",
+			CustomerID:    "cust-1",
+			CustomerName:  "John Doe",
+			CustomerEmail: "john@example.com",
+			ProductName:   "Laptop",
+			ProductSKU:    "LT-001",
+			Quantity:      1,
+			Amount:        1000.00,
+			Currency:      "USD",
+			Status:        "pending",
+			ShippingAddr:  "123 Main St",
+			Notes:         "Test order",
+			CreatedAt:     time.Now().Format(time.RFC3339Nano),
+			UpdatedAt:     time.Now().Format(time.RFC3339Nano),
 		},
+		Source: model.DebeziumSource{
+			Table: "orders",
+		},
+		TsMs: time.Now().UnixMilli(),
 	}
 
 	eventBytes, _ := json.Marshal(event)
@@ -325,14 +313,12 @@ func TestDebeziumHandler_HandleUnknownOperation(t *testing.T) {
 
 	handler := consumer.NewDebeziumHandler(mockRepo, metricsRegistry, logger)
 
-	event := model.DebeziumEvent{
-		Payload: model.DebeziumPayload{
-			Op: "x", // Unknown operation
-			Source: model.DebeziumSource{
-				Table: "orders",
-			},
-			TsMs: time.Now().UnixMilli(),
+	event := model.DebeziumPayload{
+		Op: "x", // Unknown operation
+		Source: model.DebeziumSource{
+			Table: "orders",
 		},
+		TsMs: time.Now().UnixMilli(),
 	}
 
 	eventBytes, _ := json.Marshal(event)

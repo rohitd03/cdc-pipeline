@@ -63,31 +63,29 @@ func TestConsumer_ProcessDebeziumInsertMessage(t *testing.T) {
 	handler := consumer.NewDebeziumHandler(mockRepo, metricsRegistry, logger)
 
 	// Create a Debezium INSERT event
-	event := model.DebeziumEvent{
-		Payload: model.DebeziumPayload{
-			Op: "c",
-			After: &model.OrderDBRow{
-				ID:            "test-order-1",
-				CustomerID:    "cust-1",
-				CustomerName:  "John Doe",
-				CustomerEmail: "john@example.com",
-				ProductName:   "Test Product",
-				ProductSKU:    "TEST-001",
-				Quantity:      2,
-				Amount:        99.99,
-				Currency:      "USD",
-				Status:        "pending",
-				ShippingAddr:  "123 Test St",
-				Notes:         "Test note",
-				CreatedAt:     time.Now().UnixMicro(),
-				UpdatedAt:     time.Now().UnixMicro(),
-			},
-			Source: model.DebeziumSource{
-				Table: "orders",
-				LSN:   1000,
-			},
-			TsMs: time.Now().UnixMilli(),
+	event := model.DebeziumPayload{
+		Op: "c",
+		After: &model.OrderDBRow{
+			ID:            "test-order-1",
+			CustomerID:    "cust-1",
+			CustomerName:  "John Doe",
+			CustomerEmail: "john@example.com",
+			ProductName:   "Test Product",
+			ProductSKU:    "TEST-001",
+			Quantity:      2,
+			Amount:        99.99,
+			Currency:      "USD",
+			Status:        "pending",
+			ShippingAddr:  "123 Test St",
+			Notes:         "Test note",
+			CreatedAt:     time.Now().Format(time.RFC3339Nano),
+			UpdatedAt:     time.Now().Format(time.RFC3339Nano),
 		},
+		Source: model.DebeziumSource{
+			Table: "orders",
+			LSN:   1000,
+		},
+		TsMs: time.Now().UnixMilli(),
 	}
 
 	eventBytes, err := json.Marshal(event)
@@ -111,35 +109,33 @@ func TestConsumer_ProcessDebeziumUpdateMessage(t *testing.T) {
 	handler := consumer.NewDebeziumHandler(mockRepo, metricsRegistry, logger)
 
 	// Create a Debezium UPDATE event
-	event := model.DebeziumEvent{
-		Payload: model.DebeziumPayload{
-			Op: "u",
-			Before: &model.OrderDBRow{
-				ID:     "test-order-1",
-				Status: "pending",
-			},
-			After: &model.OrderDBRow{
-				ID:            "test-order-1",
-				CustomerID:    "cust-1",
-				CustomerName:  "John Doe",
-				CustomerEmail: "john@example.com",
-				ProductName:   "Test Product",
-				ProductSKU:    "TEST-001",
-				Quantity:      2,
-				Amount:        99.99,
-				Currency:      "USD",
-				Status:        "confirmed",
-				ShippingAddr:  "123 Test St",
-				Notes:         "Test note",
-				CreatedAt:     time.Now().UnixMicro(),
-				UpdatedAt:     time.Now().UnixMicro(),
-			},
-			Source: model.DebeziumSource{
-				Table: "orders",
-				LSN:   1001,
-			},
-			TsMs: time.Now().UnixMilli(),
+	event := model.DebeziumPayload{
+		Op: "u",
+		Before: &model.OrderDBRow{
+			ID:     "test-order-1",
+			Status: "pending",
 		},
+		After: &model.OrderDBRow{
+			ID:            "test-order-1",
+			CustomerID:    "cust-1",
+			CustomerName:  "John Doe",
+			CustomerEmail: "john@example.com",
+			ProductName:   "Test Product",
+			ProductSKU:    "TEST-001",
+			Quantity:      2,
+			Amount:        99.99,
+			Currency:      "USD",
+			Status:        "confirmed",
+			ShippingAddr:  "123 Test St",
+			Notes:         "Test note",
+			CreatedAt:     time.Now().Format(time.RFC3339Nano),
+			UpdatedAt:     time.Now().Format(time.RFC3339Nano),
+		},
+		Source: model.DebeziumSource{
+			Table: "orders",
+			LSN:   1001,
+		},
+		TsMs: time.Now().UnixMilli(),
 	}
 
 	eventBytes, err := json.Marshal(event)
@@ -163,18 +159,16 @@ func TestConsumer_ProcessDebeziumDeleteMessage(t *testing.T) {
 	handler := consumer.NewDebeziumHandler(mockRepo, metricsRegistry, logger)
 
 	// Create a Debezium DELETE event
-	event := model.DebeziumEvent{
-		Payload: model.DebeziumPayload{
-			Op: "d",
-			Before: &model.OrderDBRow{
-				ID: "test-order-1",
-			},
-			Source: model.DebeziumSource{
-				Table: "orders",
-				LSN:   1002,
-			},
-			TsMs: time.Now().UnixMilli(),
+	event := model.DebeziumPayload{
+		Op: "d",
+		Before: &model.OrderDBRow{
+			ID: "test-order-1",
 		},
+		Source: model.DebeziumSource{
+			Table: "orders",
+			LSN:   1002,
+		},
+		TsMs: time.Now().UnixMilli(),
 	}
 
 	eventBytes, err := json.Marshal(event)

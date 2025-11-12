@@ -9,6 +9,10 @@ done
 
 echo "Kafka Connect is ready. Registering Debezium connector..."
 
+# Delete existing connector if present (allows re-registration with updated config)
+curl -s -X DELETE http://localhost:8083/connectors/orders-connector > /dev/null 2>&1 || true
+sleep 1
+
 # Register the Debezium PostgreSQL connector
 curl -X POST http://localhost:8083/connectors \
   -H "Content-Type: application/json" \
@@ -32,7 +36,8 @@ curl -X POST http://localhost:8083/connectors \
     "key.converter.schemas.enable": "false",
     "value.converter.schemas.enable": "false",
     "snapshot.mode": "initial",
-    "heartbeat.interval.ms": "5000"
+    "heartbeat.interval.ms": "5000",
+    "decimal.handling.mode": "double"
   }
 }'
 

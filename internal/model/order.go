@@ -75,8 +75,8 @@ type OrderDBRow struct {
 	Status        string  `json:"status"`
 	ShippingAddr  string  `json:"shipping_address"`
 	Notes         string  `json:"notes"`
-	CreatedAt     int64   `json:"created_at"` // Debezium sends timestamps as microseconds epoch
-	UpdatedAt     int64   `json:"updated_at"`
+	CreatedAt     string  `json:"created_at"` // Debezium sends TIMESTAMPTZ as ISO 8601 string
+	UpdatedAt     string  `json:"updated_at"`
 }
 
 // ToOrder converts OrderDBRow to Order
@@ -94,7 +94,14 @@ func (r *OrderDBRow) ToOrder() *Order {
 		Status:        OrderStatus(r.Status),
 		ShippingAddr:  r.ShippingAddr,
 		Notes:         r.Notes,
-		CreatedAt:     time.UnixMicro(r.CreatedAt),
-		UpdatedAt:     time.UnixMicro(r.UpdatedAt),
+		CreatedAt:     parseTime(r.CreatedAt),
+		UpdatedAt:     parseTime(r.UpdatedAt),
 	}
+}
+
+// parseTime parses an ISO 8601 / RFC 3339 timestamp string from Debezium.
+// Returns zero time on any parse failure.
+func parseTime(s string) time.Time {
+	t, _ := time.Parse(time.RFC3339Nano, s)
+	return t
 }

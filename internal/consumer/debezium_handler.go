@@ -33,8 +33,8 @@ func NewDebeziumHandler(esRepo elasticsearch.OrderRepository, metrics *metrics.M
 func (h *DebeziumHandler) HandleMessage(ctx context.Context, messageBytes []byte) error {
 	start := time.Now()
 
-	// Parse Debezium event
-	var event model.DebeziumEvent
+	// Parse flat Debezium event (schemas.enable=false — no "payload" wrapper)
+	var event model.DebeziumPayload
 	if err := json.Unmarshal(messageBytes, &event); err != nil {
 		h.logger.Error("failed to parse debezium event",
 			zap.Error(err),
@@ -44,8 +44,8 @@ func (h *DebeziumHandler) HandleMessage(ctx context.Context, messageBytes []byte
 	}
 
 	// Extract operation
-	op := event.Payload.Op
-	source := event.Payload.Source
+	op := event.Op
+	source := event.Source
 
 	h.logger.Debug("processing debezium event",
 		zap.String("op", op),
@@ -56,7 +56,15 @@ func (h *DebeziumHandler) HandleMessage(ctx context.Context, messageBytes []byte
 	// Route based on operation
 	var err error
 	switch op {
-	case "c", "r": // create or read (snapshot)
+	case "c", "r": // create or snapshot read
+		err = h.handleCreate(ctx, &event)
+	case "": // tombstone / end-of-snapshot marker — skip if no payload
+		if event.After == nil {
+			h.logger.Debug("skipping empty-op event with no after payload",
+				zap.String("table", source.Table),
+			)
+			return nil
+		}
 		err = h.handleCreate(ctx, &event)
 	case "u": // update
 		err = h.handleUpdate(ctx, &event)
@@ -74,8 +82,8 @@ func (h *DebeziumHandler) HandleMessage(ctx context.Context, messageBytes []byte
 	}
 
 	// Update pipeline metrics
-	h.metrics.PipelineLastEventTimestamp.Set(float64(event.Payload.TsMs / 1000))
-	lag := time.Now().Unix() - (event.Payload.TsMs / 1000)
+	h.metrics.PipelineLastEventTimestamp.Set(float64(event.TsMs / 1000))
+	lag := time.Now().Unix() - (event.TsMs / 1000)
 	h.metrics.PipelineLag.Set(float64(lag))
 
 	duration := time.Since(start).Seconds()
@@ -88,13 +96,13 @@ func (h *DebeziumHandler) HandleMessage(ctx context.Context, messageBytes []byte
 }
 
 // handleCreate processes INSERT operations
-func (h *DebeziumHandler) handleCreate(ctx context.Context, event *model.DebeziumEvent) error {
-	if event.Payload.After == nil {
+func (h *DebeziumHandler) handleCreate(ctx context.Context, event *model.DebeziumPayload) error {
+	if event.After == nil {
 		h.logger.Error("missing after field in create event")
 		return fmt.Errorf("%w: create operation requires after field", appErrors.ErrMissingAfterField)
 	}
 
-	order := event.Payload.After.ToOrder()
+	order := event.After.ToOrder()
 
 	h.logger.Info("indexing new order",
 		zap.String("order_id", order.ID),
@@ -114,13 +122,13 @@ func (h *DebeziumHandler) handleCreate(ctx context.Context, event *model.Debeziu
 }
 
 // handleUpdate processes UPDATE operations
-func (h *DebeziumHandler) handleUpdate(ctx context.Context, event *model.DebeziumEvent) error {
-	if event.Payload.After == nil {
+func (h *DebeziumHandler) handleUpdate(ctx context.Context, event *model.DebeziumPayload) error {
+	if event.After == nil {
 		h.logger.Error("missing after field in update event")
 		return fmt.Errorf("%w: update operation requires after field", appErrors.ErrMissingAfterField)
 	}
 
-	order := event.Payload.After.ToOrder()
+	order := event.After.ToOrder()
 
 	h.logger.Info("updating order",
 		zap.String("order_id", order.ID),
@@ -140,13 +148,13 @@ func (h *DebeziumHandler) handleUpdate(ctx context.Context, event *model.Debeziu
 }
 
 // handleDelete processes DELETE operations
-func (h *DebeziumHandler) handleDelete(ctx context.Context, event *model.DebeziumEvent) error {
-	if event.Payload.Before == nil {
+func (h *DebeziumHandler) handleDelete(ctx context.Context, event *model.DebeziumPayload) error {
+	if event.Before == nil {
 		h.logger.Error("missing before field in delete event")
 		return fmt.Errorf("%w: delete operation requires before field", appErrors.ErrMissingBeforeField)
 	}
 
-	orderID := event.Payload.Before.ID
+	orderID := event.Before.ID
 
 	h.logger.Info("deleting order",
 		zap.String("order_id", orderID),
