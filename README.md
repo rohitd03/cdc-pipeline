@@ -1,3 +1,7 @@
+![CI](https://github.com/rohitd03/cdc-pipeline/actions/workflows/ci.yml/badge.svg)
+![Go Version](https://img.shields.io/badge/Go-1.21+-00ADD8?logo=go)
+![License](https://img.shields.io/badge/license-MIT-green)
+
 # CDC Pipeline — Change Data Capture with Go, Kafka, Debezium, PostgreSQL, and Elasticsearch
 
 A production-ready CDC (Change Data Capture) pipeline that automatically synchronizes data from PostgreSQL to Elasticsearch via Kafka and Debezium, built with Go.
